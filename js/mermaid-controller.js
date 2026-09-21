@@ -5,6 +5,8 @@ window.MarkdownViewer = window.MarkdownViewer || {};
   var renderQueue = Promise.resolve();
   var pans = new WeakMap();
   var activePointers = new WeakMap();
+  var frameSizes = new WeakMap();
+  var PAN_MARGIN = 160;
 
   function escapeText(text) {
     var d = document.createElement('div');
@@ -119,47 +121,49 @@ window.MarkdownViewer = window.MarkdownViewer || {};
           svg.style.maxWidth = 'none';
           svg.style.display = 'block';
           svg.style.transformOrigin = 'top left';
-          var hadPan = pans.has(block);
-          var pan = pans.get(block) || {x: 0, y: 0};
-          var pad = 24;
-          var scaledWidth = naturalWidth * scale;
-          var scaledHeight = naturalHeight * scale;
+
+          /*
+           * The Mermaid frame is intentionally independent from zoom/pan.
+           * Capture its size only on the first successful render.  Zooming and
+           * panning must never make the frame itself grow.
+           */
+          var frame = frameSizes.get(block);
           var viewportWidth = canvas.clientWidth || 0;
           var viewportHeight = canvas.clientHeight || 0;
-
-          // The stage is resized only during an explicit render/zoom operation.
-          // Panning must never resize the stage; it only changes the holder position.
-          var stageWidth = Math.max(viewportWidth, scaledWidth + pad * 2);
-          var stageHeight = Math.max(viewportHeight, scaledHeight + pad * 2, 160);
-          stage.style.width = stageWidth + 'px';
-          stage.style.height = stageHeight + 'px';
-
-          var baseLeft = Math.max(pad, (stageWidth - scaledWidth) / 2);
-          var baseTop = Math.max(pad, (stageHeight - scaledHeight) / 2);
-          if (!hadPan) {
-            pan = {x: 0, y: 0};
-            pans.set(block, pan);
+          if (!frame) {
+            /* Capture the initial frame size once, using the 100% diagram size.
+             * Later zoom operations must not change these dimensions. */
+            var initialScaledWidth = naturalWidth;
+            var initialScaledHeight = naturalHeight;
+            frame = {
+              width: Math.max(320, viewportWidth || 320, initialScaledWidth + 48),
+              height: Math.max(220, viewportHeight || 220, initialScaledHeight + 48)
+            };
+            frameSizes.set(block, frame);
           }
 
-          // Keep the diagram itself inside the stage when the zoom level changes.
-          // This prevents a previously panned diagram from disappearing after zooming out.
-          var minPanX = -baseLeft;
-          var maxPanX = Math.max(minPanX, stageWidth - scaledWidth - baseLeft);
-          var minPanY = -baseTop;
-          var maxPanY = Math.max(minPanY, stageHeight - scaledHeight - baseTop);
-          pan.x = Math.min(maxPanX, Math.max(minPanX, pan.x));
-          pan.y = Math.min(maxPanY, Math.max(minPanY, pan.y));
+          stage.style.width = frame.width + 'px';
+          stage.style.height = frame.height + 'px';
+          stage.style.minWidth = '0';
+          stage.style.minHeight = '0';
+
+          var scaledWidth = naturalWidth * scale;
+          var scaledHeight = naturalHeight * scale;
+          /* Center the diagram at every explicit zoom/redraw. */
+          var baseLeft = (frame.width - scaledWidth) / 2;
+          var baseTop = (frame.height - scaledHeight) / 2;
+          var pan = {x: 0, y: 0};
           pans.set(block, pan);
 
           svgHolder.style.width = naturalWidth + 'px';
           svgHolder.style.height = naturalHeight + 'px';
           svgHolder.style.position = 'absolute';
-          svgHolder.style.left = (baseLeft + pan.x) + 'px';
-          svgHolder.style.top = (baseTop + pan.y) + 'px';
+          svgHolder.style.left = baseLeft + 'px';
+          svgHolder.style.top = baseTop + 'px';
           svgHolder.style.transform = 'scale(' + scale + ')';
           svgHolder.style.transformOrigin = 'top left';
-          canvas.dataset.panX = String(pan.x);
-          canvas.dataset.panY = String(pan.y);
+          canvas.dataset.panX = '0';
+          canvas.dataset.panY = '0';
         }
       } catch (e) {
         canvas.innerHTML = errorHtml(e && e.message ? e.message : String(e));
@@ -199,27 +203,33 @@ window.MarkdownViewer = window.MarkdownViewer || {};
       var holder = canvas.querySelector('.mermaid-svg-holder');
       var stage = canvas.querySelector('.mermaid-stage');
       if (holder && stage) {
-        var pan = pans.get(block);
+        var pan = pans.get(block) || {x: 0, y: 0};
+        var frame = frameSizes.get(block) || {width: stage.clientWidth, height: stage.clientHeight};
         var scale = scales.get(block) || 1;
-        var pad = 24;
         var svg = holder.querySelector('svg');
         var vb = svg ? (svg.getAttribute('viewBox') || '').trim().split(/[ ,]+/).map(Number) : [];
         var naturalWidth = vb.length === 4 && isFinite(vb[2]) && vb[2] > 0 ? vb[2] : holder.offsetWidth;
         var naturalHeight = vb.length === 4 && isFinite(vb[3]) && vb[3] > 0 ? vb[3] : holder.offsetHeight;
         var scaledWidth = naturalWidth * scale;
         var scaledHeight = naturalHeight * scale;
-        var stageWidth = stage.clientWidth;
-        var stageHeight = stage.clientHeight;
-        var baseLeft = Math.max(pad, (stageWidth - scaledWidth) / 2);
-        var baseTop = Math.max(pad, (stageHeight - scaledHeight) / 2);
-        var minPanX = -baseLeft;
-        var maxPanX = Math.max(minPanX, stageWidth - scaledWidth - baseLeft);
-        var minPanY = -baseTop;
-        var maxPanY = Math.max(minPanY, stageHeight - scaledHeight - baseTop);
+        var baseLeft = (frame.width - scaledWidth) / 2;
+        var baseTop = (frame.height - scaledHeight) / 2;
+
+        /*
+         * Internal pan margin: the diagram can be moved beyond its centered
+         * position without changing the frame dimensions.  This creates an
+         * invisible working area around the diagram while the visible frame
+         * remains fixed.
+         */
+        var minPanX = -PAN_MARGIN - Math.max(0, baseLeft + scaledWidth - frame.width);
+        var maxPanX = PAN_MARGIN + Math.max(0, -baseLeft);
+        var minPanY = -PAN_MARGIN - Math.max(0, baseTop + scaledHeight - frame.height);
+        var maxPanY = PAN_MARGIN + Math.max(0, -baseTop);
         pan.x = Math.min(maxPanX, Math.max(minPanX, pan.x));
         pan.y = Math.min(maxPanY, Math.max(minPanY, pan.y));
         pans.set(block, pan);
-        // IMPORTANT: do not modify stage width/height while panning.
+
+        /* Panning changes only the diagram position. Never resize the stage. */
         holder.style.left = (baseLeft + pan.x) + 'px';
         holder.style.top = (baseTop + pan.y) + 'px';
         holder.style.transform = 'scale(' + scale + ')';

@@ -115,6 +115,62 @@ window.MarkdownViewer = window.MarkdownViewer || {};
     });
   }
 
+  // Browser-version image policy: network image URLs only.
+  // Important: protect remote image src values before DOMPurify runs. Some
+  // local/offline DOMPurify builds can strip an otherwise valid remote src
+  // when ALLOWED_URI_REGEXP is customized. If src becomes empty, the browser
+  // interprets it as the current file:// index.html, which produces the
+  // misleading "Unsafe attempt to load URL ... index.html" console message.
+  function protectNetworkImageSources(html) {
+    var box = document.createElement('div');
+    box.innerHTML = html;
+    var images = box.querySelectorAll('img');
+    var sources = [];
+    var tokenBase = 'https://offline-markdown-workbench.invalid/__mv_remote_image_token_';
+
+    for (var i = 0; i < images.length; i++) {
+      var img = images[i];
+      var value = String(img.getAttribute('src') || '').trim();
+      if (/^(?:https?:\/\/|\/\/)/i.test(value)) {
+        var normalized = /^\/\//.test(value) ? ('https:' + value) : value;
+        var token = tokenBase + sources.length + '__';
+        sources.push(normalized);
+        img.setAttribute('src', token);
+      }
+    }
+    return { html: box.innerHTML, sources: sources, tokenBase: tokenBase };
+  }
+
+  function restoreNetworkImageSources(html, sources, tokenBase) {
+    var box = document.createElement('div');
+    box.innerHTML = html;
+    var images = box.querySelectorAll('img');
+    for (var i = 0; i < images.length; i++) {
+      var img = images[i];
+      var value = String(img.getAttribute('src') || '');
+      if (value.indexOf(tokenBase) === 0) {
+        var suffix = value.slice(tokenBase.length);
+        var match = suffix.match(/^(\d+)__/);
+        if (match) {
+          var index = parseInt(match[1], 10);
+          if (sources[index]) {
+            img.setAttribute('src', sources[index]);
+            img.setAttribute('referrerpolicy', 'no-referrer');
+            img.setAttribute('loading', 'lazy');
+            img.setAttribute('decoding', 'async');
+          }
+        }
+      } else if (!/^(?:https?:\/\/)/i.test(value)) {
+        // Relative paths, file:// URLs, and local absolute paths are outside
+        // the browser-version image policy. Remove src so they can never
+        // resolve to the current file:// index.html by accident.
+        img.removeAttribute('src');
+        img.setAttribute('data-image-source-unsupported', value ? 'non-http' : 'empty');
+      }
+    }
+    return box.innerHTML;
+  }
+
   function decodeHtml(text) {
     var ta = document.createElement('textarea');
     ta.innerHTML = String(text || '');
@@ -322,10 +378,16 @@ window.MarkdownViewer = window.MarkdownViewer || {};
       mangle: false
     });
 
+    // Protect remote image URLs before sanitization so the offline DOMPurify
+    // build cannot turn a valid remote image into src="".
+    var protectedImages = protectNetworkImageSources(html);
+
     // Sanitize ordinary Markdown first. Mermaid has not entered the DOM yet.
-    html = DOMPurify.sanitize(html, {
-      USE_PROFILES: { html: true }
+    html = DOMPurify.sanitize(protectedImages.html, {
+      USE_PROFILES: { html: true },
+      ALLOWED_URI_REGEXP: /^(?:https?:\/\/)/i
     });
+    html = restoreNetworkImageSources(html, protectedImages.sources, protectedImages.tokenBase);
 
     // Promote h6 placeholders to logical levels 7-10 after sanitization.
     // Keeping a real h6 element preserves browser heading behavior while the

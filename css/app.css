@@ -1665,4 +1665,14 @@ a:focus-visible {
 }
 
 /* v61: the visible Mermaid frame is the mermaid-block itself. Horizontal resizing changes the whole frame width, while the canvas keeps width:100%. */
-.mermaid-block.mv-mermaid-frame-sized { width: auto; }
+.mermaid-block.mv-mermaid-frame-sized {
+  width: var(--mv-mermaid-frame-width, 100%);
+  max-width: 100%;
+}
+
+/* Keep an explicitly resized frame responsive: it may shrink below the user's
+   saved width on a narrow viewport, but the explicit width is restored when
+   space becomes available again. */
+.mermaid-block.mv-mermaid-frame-sized .mermaid-canvas {
+  width: 100%;
+}

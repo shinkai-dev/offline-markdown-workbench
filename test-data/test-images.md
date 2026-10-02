@@ -6,7 +6,7 @@ GIFは通常の `<img>` として扱うため、アニメーションもその�
 
 ## HTTPS画像
 
-![Remote PNG](https://avatars.githubusercontent.com/u/287231805)
+![Remote PNG](https://upload.wikimedia.org/wikipedia/commons/3/3f/PNG_Test.png)
 
 ## HTTPS GIF
 

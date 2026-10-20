@@ -202,6 +202,17 @@ a:focus-visible {
   align-items: center
 }
 
+
+.reading-toolbar .width-label {
+  margin-left: 12px;
+}
+
+.reading-toolbar .toolbar-label {
+  color: var(--text-muted, var(--text-secondary));
+  font-size: 0.85rem;
+  white-space: nowrap;
+  align-self: center;
+}
 .reading-toolbar .spacer {
   flex: 1
 }

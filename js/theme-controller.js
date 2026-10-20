@@ -17,6 +17,9 @@ else
          var t = document.querySelector('.theme-select');
          if (t)
     t.value = s.theme;
+         var numberInputs = document.querySelectorAll('.modal input[type=number]');
+         if (numberInputs.length)
+    numberInputs[0].value = s.fontSize;
          };
      M.toggleDark = function () { M.settings.theme = (M.settings.theme === 'dark' ? 'light' : 'dark');
          M.saveSettings();

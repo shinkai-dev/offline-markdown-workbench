@@ -23,8 +23,12 @@ window.MarkdownViewer = window.MarkdownViewer || {};
              english: 'English',
              japanese: '日本語',
              close: '閉じる',
-             widthMinus: '本文−',
-             widthPlus: '本文＋',
+             fontSizeMinus: '−',
+             fontSizePlus: '＋',
+             widthMinus: '−',
+             widthPlus: '＋',
+             fontSizeLabel: '文字サイズ',
+             documentWidth: '本文幅',
              empty: 'Markdownドキュメントは空です。',
              rendering: '描画中…',
              renderError: '読み込み・描画エラー',
@@ -97,8 +101,12 @@ window.MarkdownViewer = window.MarkdownViewer || {};
              english: 'English',
              japanese: 'Japanese',
              close: 'Close',
-             widthMinus: 'Width −',
-             widthPlus: 'Width +',
+             fontSizeMinus: '−',
+             fontSizePlus: '+',
+             widthMinus: '−',
+             widthPlus: '+',
+             fontSizeLabel: 'Font size',
+             documentWidth: 'Document width',
              empty: 'The Markdown document is empty.',
              rendering: 'Rendering…',
              renderError: 'Load/render error',
@@ -158,12 +166,17 @@ window.MarkdownViewer = window.MarkdownViewer || {};
              'settings-btn': 'settings',
              'width-minus': 'widthMinus',
              'width-plus': 'widthPlus',
+             'font-size-minus': 'fontSizeMinus',
+             'font-size-plus': 'fontSizePlus',
              'toc-toggle': 'tocClose',
              'toc-reopen': 'tocOpen' };
         Object.keys(map).forEach(function (id) { var e = document.getElementById(id);
              if (e)
             e.textContent = M.t(map[id]);
              });
+        var toolbarLabels = document.querySelectorAll('.reading-toolbar .toolbar-label');
+        if (toolbarLabels[0]) toolbarLabels[0].textContent = M.t('fontSizeLabel');
+        if (toolbarLabels[1]) toolbarLabels[1].textContent = M.t('documentWidth');
         var search = document.querySelector('.toc-search');
         if (search) {
             search.placeholder = M.t('searchToc');
@@ -213,7 +226,7 @@ window.MarkdownViewer = window.MarkdownViewer || {};
         M.notify(M.t('clipboardUnavailable'));
     } } };
     function shell() { var app = document.getElementById('app');
-         app.innerHTML = '<div class="app-shell"><header class="topbar"><strong class="brand">Offline Markdown Workbench</strong><span class="filename">' + M.t('notLoaded') + '</span><div class="top-actions"><button class="icon-btn hide-small" id="open-btn">' + M.t('open') + '</button><button class="icon-btn" id="settings-btn">' + M.t('settings') + '</button></div></header><div class="workspace"><aside class="sidebar"><div class="sidebar-head"><h2>' + M.t('toc') + '</h2><button class="icon-btn toc-toggle" id="toc-toggle" type="button" aria-expanded="true" aria-label="×" title="×">×</button></div><input class="toc-search" placeholder="' + M.t('searchToc') + '" aria-label="' + M.t('searchToc') + '"><ol class="toc"></ol></aside><main class="main"><div class="reading-toolbar"><button class="toc-reopen icon-btn" id="toc-reopen" type="button" aria-expanded="false" aria-label="≡" title="≡">≡</button><span id="status">' + M.t('loading') + '</span><span class="spacer"></span><button class="toolbar-btn" id="width-minus">' + M.t('widthMinus') + '</button><button class="toolbar-btn" id="width-plus">' + M.t('widthPlus') + '</button></div><article class="doc"><div class="empty"><div class="empty-card"><h1>' + M.t('emptyTitle') + '</h1><p>' + M.t('emptyText') + '</p><div style="display:flex;gap:8px;margin-bottom:10px"><button class="toolbar-btn" id="empty-open">' + M.t('open') + '</button></div></div></div></article></main></div></div>';
+         app.innerHTML = '<div class="app-shell"><header class="topbar"><strong class="brand">Offline Markdown Workbench</strong><span class="filename">' + M.t('notLoaded') + '</span><div class="top-actions"><button class="icon-btn hide-small" id="open-btn">' + M.t('open') + '</button><button class="icon-btn" id="settings-btn">' + M.t('settings') + '</button></div></header><div class="workspace"><aside class="sidebar"><div class="sidebar-head"><h2>' + M.t('toc') + '</h2><button class="icon-btn toc-toggle" id="toc-toggle" type="button" aria-expanded="true" aria-label="×" title="×">×</button></div><input class="toc-search" placeholder="' + M.t('searchToc') + '" aria-label="' + M.t('searchToc') + '"><ol class="toc"></ol></aside><main class="main"><div class="reading-toolbar"><button class="toc-reopen icon-btn" id="toc-reopen" type="button" aria-expanded="false" aria-label="≡" title="≡">≡</button><span id="status">' + M.t('loading') + '</span><span class="spacer"></span><span class="toolbar-label">' + M.t('fontSizeLabel') + '</span><button class="toolbar-btn" id="font-size-minus" aria-label="' + M.t('fontSizeLabel') + ' −">−</button><button class="toolbar-btn" id="font-size-plus" aria-label="' + M.t('fontSizeLabel') + ' ＋">＋</button><span class="toolbar-label width-label">' + M.t('documentWidth') + '</span><button class="toolbar-btn" id="width-minus">−</button><button class="toolbar-btn" id="width-plus">＋</button></div><article class="doc"><div class="empty"><div class="empty-card"><h1>' + M.t('emptyTitle') + '</h1><p>' + M.t('emptyText') + '</p><div style="display:flex;gap:8px;margin-bottom:10px"><button class="toolbar-btn" id="empty-open">' + M.t('open') + '</button></div></div></div></article></main></div></div>';
          document.getElementById('open-btn').onclick = function () { document.getElementById('file-input').click();
              };
          document.getElementById('empty-open').onclick = function () { document.getElementById('file-input').click();
@@ -227,13 +240,10 @@ window.MarkdownViewer = window.MarkdownViewer || {};
              M.saveSettings();
              M.applyTocState();
              };
-         document.getElementById('width-minus').onclick = function () { M.settings.docWidth = Math.max(520,
-             M.settings.docWidth - 60);
-             M.applySettings();
-             };
-         document.getElementById('width-plus').onclick = function () { M.settings.docWidth = M.settings.docWidth + 60;
-             M.applySettings();
-             };
+         document.getElementById('font-size-minus').onclick = function () { M.settings.fontSize = Math.max(12, M.settings.fontSize - 1); M.saveSettings(); M.applySettings(); };
+         document.getElementById('font-size-plus').onclick = function () { M.settings.fontSize = Math.min(24, M.settings.fontSize + 1); M.saveSettings(); M.applySettings(); };
+         document.getElementById('width-minus').onclick = function () { M.settings.docWidth = Math.max(520, M.settings.docWidth - 60); M.applySettings(); };
+         document.getElementById('width-plus').onclick = function () { M.settings.docWidth = Math.min(1800, M.settings.docWidth + 60); M.applySettings(); };
          M.applySettings();
          }
     M.applyTocState = function () { var ws = document.querySelector('.workspace'),

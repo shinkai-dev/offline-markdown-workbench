@@ -427,20 +427,76 @@ a:focus-visible {
   transform: none
 }
 
+/* Hide the old preview completely while a replacement document is being
+   rendered. The loading overlay is appended directly to body, so it remains
+   visible while the app-shell is hidden. This prevents the transient small
+   top-left document frame seen during Webview re-rendering. */
+.loading[hidden] {
+  display: none !important;
+}
+
+/* Never expose a retained Preview while VS Code is restoring the Webview or
+   while the Editor Group is still narrower than a usable preview width. */
+body.vscode-webview.mv-preview-boot #app,
+body.vscode-webview.mv-rendering #app,
+body.vscode-webview:not(.mv-preview-ready) #app {
+  visibility: hidden !important;
+}
+
 .loading {
-  position: fixed;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
   inset: 0;
   z-index: 110;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, .2)
+  background: var(--bg);
+  cursor: wait
 }
 
-.loading>div {
-  background: var(--surface);
-  padding: 18px 22px;
-  border-radius: 10px;
-  border: 1px solid var(--border)
+.loading-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  min-height: 44px;
+  background: transparent;
+  border: 0
+}
+
+.loading-dots {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  height: 24px
+}
+
+.loading-dots > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text);
+  animation: mv-loading-bounce .72s ease-in-out infinite;
+  transform: translateY(0);
+  opacity: .85
+}
+
+.loading-dots > span:nth-child(2) { animation-delay: .12s }
+.loading-dots > span:nth-child(3) { animation-delay: .24s }
+
+@keyframes mv-loading-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: .55 }
+  30% { transform: translateY(-12px); opacity: 1 }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-dots > span { animation: none; opacity: .8 }
 }
 
 .md-table-block {
@@ -649,7 +705,6 @@ a:focus-visible {
   user-select: none;
   overscroll-behavior: contain;
 }
-
 
 /* Mermaid frame resize handles: frame dimensions are independent from diagram zoom/pan. */
 .mermaid-resize-handle {
@@ -1514,7 +1569,58 @@ a:focus-visible {
   right: -5px;
   width: 10px;
 }
-\n\n/* v36: deterministic per-column action layout.\n   The resize handle belongs strictly to its own TH so neighbouring handles\n   cannot steal pointer events. The column's <col> width is the only trigger\n   for switching the action group to vertical. */\n.table-scroll th .column-resizer {\n  right: 0;\n  top: 0;\n  width: 7px;\n  height: 100%;\n  z-index: 10;\n}\n\n.table-scroll th.mv-column-vertical {\n  width: auto;\n  min-width: 0;\n}\n\n.table-scroll th.mv-column-vertical .column-title {\n  display: block;\n  width: 100%;\n  padding-right: 0;\n}\n\n.table-scroll th.mv-column-vertical .column-actions {\n  position: relative;\n  top: auto;\n  right: auto;\n  width: 20px;\n  margin: 5px auto 0;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 2px;\n  border-top: 1px solid var(--border);\n  padding-top: 4px;\n}\n\n.table-scroll th.mv-column-vertical .column-actions button {\n  width: 20px;\n  min-width: 20px;\n  height: 19px;\n  flex: 0 0 19px;\n}\n\n/* Do not let action controls or the label capture the resize strip. */\n.table-scroll th .column-actions,\n.table-scroll th .column-title {\n  pointer-events: auto;\n}\n
+
+
+/* v36: deterministic per-column action layout.
+   The resize handle belongs strictly to its own TH so neighbouring handles
+   cannot steal pointer events. The column's <col> width is the only trigger
+   for switching the action group to vertical. */
+.table-scroll th .column-resizer {
+  right: 0;
+  top: 0;
+  width: 7px;
+  height: 100%;
+  z-index: 10;
+}
+
+.table-scroll th.mv-column-vertical {
+  width: auto;
+  min-width: 0;
+}
+
+.table-scroll th.mv-column-vertical .column-title {
+  display: block;
+  width: 100%;
+  padding-right: 0;
+}
+
+.table-scroll th.mv-column-vertical .column-actions {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: 20px;
+  margin: 5px auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+
+.table-scroll th.mv-column-vertical .column-actions button {
+  width: 20px;
+  min-width: 20px;
+  height: 19px;
+  flex: 0 0 19px;
+}
+
+/* Do not let action controls or the label capture the resize strip. */
+.table-scroll th .column-actions,
+.table-scroll th .column-title {
+  pointer-events: auto;
+}
+
 /* v45: stable collapsible table-of-contents sidebar */
 .sidebar-head {
   position: relative;
@@ -1564,11 +1670,11 @@ a:focus-visible {
     transition: margin-left .18s ease;
   }
 
-  .workspace.toc-collapsed {
+  .workspace.sidebar-collapsed {
     margin-left: 0;
   }
 
-  .workspace.toc-collapsed .sidebar {
+  .workspace.sidebar-collapsed .sidebar {
     transform: translateX(-105%);
     pointer-events: none;
   }
@@ -1584,7 +1690,7 @@ a:focus-visible {
     left: 8px;
   }
 
-  .workspace.toc-collapsed .sidebar {
+  .workspace.sidebar-collapsed .sidebar {
     transform: translateX(-105%);
   }
 }
@@ -1630,19 +1736,19 @@ a:focus-visible {
   min-height: 47px;
 }
 
-.workspace.toc-collapsed .reading-toolbar {
+.workspace.sidebar-collapsed .reading-toolbar {
   left: 0;
 }
 
-.workspace:not(.toc-collapsed) {
+.workspace:not(.sidebar-collapsed) {
   --doc-max-width: 1400px;
 }
 
-.workspace.toc-collapsed {
+.workspace.sidebar-collapsed {
   --doc-max-width: none;
 }
 
-.workspace.toc-collapsed .doc {
+.workspace.sidebar-collapsed .doc {
   max-width: calc(100% - 36px);
 }
 
@@ -1653,26 +1759,38 @@ a:focus-visible {
 
 @media (max-width: 900px) {
   .reading-toolbar,
-  .workspace.toc-collapsed .reading-toolbar {
+  .workspace.sidebar-collapsed .reading-toolbar {
     left: 0;
     right: 0;
   }
 
-  .workspace:not(.toc-collapsed),
-  .workspace.toc-collapsed {
+  .workspace:not(.sidebar-collapsed),
+  .workspace.sidebar-collapsed {
     --doc-max-width: none;
   }
 }
 
-/* v61: the visible Mermaid frame is the mermaid-block itself. Horizontal resizing changes the whole frame width, while the canvas keeps width:100%. */
+/* VS Code adaptation: keep the existing sidebar margin layout.
+   The workspace margin-left is intentionally controlled by the sidebar state
+   above so opening the TOC reduces the available document area instead of
+   overlaying the document. */
+.workspace:not(.sidebar-collapsed) { --doc-max-width: 1200px; }
+.workspace.sidebar-collapsed { --doc-max-width: 1200px; }
+
+/* v61/v62: the visible Mermaid frame follows the viewport while retaining the user's resized width. */
 .mermaid-block.mv-mermaid-frame-sized {
   width: var(--mv-mermaid-frame-width, 100%);
   max-width: 100%;
 }
 
-/* Keep an explicitly resized frame responsive: it may shrink below the user's
-   saved width on a narrow viewport, but the explicit width is restored when
-   space becomes available again. */
 .mermaid-block.mv-mermaid-frame-sized .mermaid-canvas {
   width: 100%;
 }
+
+/* Preserve GFM table column alignment from the Markdown separator row. */
+.table-scroll th.mv-table-align-left,
+.table-scroll td.mv-table-align-left { text-align: left; }
+.table-scroll th.mv-table-align-center,
+.table-scroll td.mv-table-align-center { text-align: center; }
+.table-scroll th.mv-table-align-right,
+.table-scroll td.mv-table-align-right { text-align: right; }

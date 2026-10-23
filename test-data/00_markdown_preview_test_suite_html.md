@@ -128,6 +128,62 @@ function testParser(input_string) {
 
 ---
 
+### 1.9 アコーディオン
+
+#### 通常のアコーディオン
+
+<details>
+  <summary>概要</summary>
+  コンテンツ詳細<br>コンテンツ_01<br>コンテンツ_02
+</details>
+
+#### 初めから開いている状態のアコーディオン
+
+<details open>
+  <summary>概要</summary>
+  コンテンツ詳細<br>コンテンツ_01<br>コンテンツ_02
+</details>
+
+#### リスト内包のアコーディオン
+
+<details>
+  <summary>概要</summary>
+  <p>詳細</p>
+  <ul>
+    <li>リスト①</li>
+    <li>リスト②</li>
+    <li>リスト③</li>
+  </ul>
+</details>
+
+#### 入れ子構造のアコーディオン
+
+<details>
+  <summary>概要</summary>
+  <p>詳細</p>
+  <ul>
+    <li>リスト①</li>
+    <li>リスト②</li>
+    <li>リスト③</li>
+  </ul>
+  <details>
+    <summary>入れ子の子①</summary>
+    コンテンツ<br>コンテンツ_01<br>コンテンツ_02
+  </details>
+  <details>
+    <summary>入れ子の子②</summary>
+    コンテンツ<br>コンテンツ_01<br>コンテンツ_02
+    <p>詳細</p>
+    <ul>
+      <li>リスト①</li>
+      <li>リスト②</li>
+      <li>リスト③</li>
+    </ul>
+  </details>
+</details>
+
+---
+
 ## 2. 意地悪テスト (Edge Cases & Parser Torture)
 
 ※パーサーが誤って文字を削ったり、パースエラーを起こさないかを検証する領域です。
@@ -409,7 +465,7 @@ erDiagram
 
 ## 1. 表セル内の改行
 
-Markdown表ではセル内に物理的な改行を入れると次の行として扱われるため、一般的なGFMと同様に `<br>` を使います。
+Markdown表ではセル内に物理的な改行を入れると次の行として扱われるため、<br>一般的なGFMと同様に `<br>` を使います。
 
 | ID | 項目 | 詳細 |
 |---:|---|---|
